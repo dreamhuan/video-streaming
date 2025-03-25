@@ -51,7 +51,7 @@ button:hover {
 }
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  /* outline: 4px auto -webkit-focus-ring-color; */
 }
 
 @media (prefers-color-scheme: light) {
@@ -86,7 +86,12 @@ button:focus-visible {
   background: #ccc;
   color: white;
   padding: 6px;
+  padding-top: 30px;
   user-select: none;
+}
+.menu-btn {
+  padding: 4px 10px;
+  margin: 0;
 }
 
 .resize-handle {
@@ -127,5 +132,9 @@ button:focus-visible {
 }
 
 .video-title {
-  margin-left: 12px;
+  position: absolute;
+  z-index: 1;
+  margin: 4px 40px;
+  padding: 0;
+  background-color: #ccc;
 }

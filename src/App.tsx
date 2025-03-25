@@ -9,10 +9,11 @@ function App() {
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [sidebarWidth, setSidebarWidth] = useState<number>(250);
   const [isResizing, setIsResizing] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
   // 从后端获取视频文件数据
   useEffect(() => {
-    fetch("http://localhost:5000/videos")
+    fetch(`http://${location.hostname}:5000/videos`)
       .then((res) => res.json())
       .then((data) => {
         setVideos(data.videos);
@@ -79,6 +80,11 @@ function App() {
     setIsResizing(false);
   };
 
+  // 处理侧栏展开收起
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   useEffect(() => {
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
@@ -90,17 +96,31 @@ function App() {
 
   return (
     <div className="container">
-      <aside className="sidebar" style={{ width: sidebarWidth }}>
-        <Tree
-          treeData={treeData}
-          selectedKeys={selectedKeys}
-          onSelect={(selectedKeys) => handleSelect(selectedKeys)}
-          expandedKeys={expandedKeys}
-          onExpand={(expandedKeys) => setExpandedKeys(expandedKeys as string[])}
-          showLine
-        />
-        <div className="resize-handle" onMouseDown={handleMouseDown} />
-      </aside>
+      <div>
+        <button
+          className="menu-btn"
+          onClick={toggleSidebar}
+          style={{ position: "fixed", zIndex: 1 }}
+        >
+          ≡
+        </button>
+        {/* <p className="video-title">{selectedVideo}</p> */}
+      </div>
+      {!isSidebarCollapsed && (
+        <aside className="sidebar" style={{ width: sidebarWidth }}>
+          <Tree
+            treeData={treeData}
+            selectedKeys={selectedKeys}
+            onSelect={(selectedKeys) => handleSelect(selectedKeys)}
+            expandedKeys={expandedKeys}
+            onExpand={(expandedKeys) =>
+              setExpandedKeys(expandedKeys as string[])
+            }
+            showLine
+          />
+          <div className="resize-handle" onMouseDown={handleMouseDown} />
+        </aside>
+      )}
       <main className="video-container">
         {selectedVideo ? (
           <VideoPlayer filename={selectedVideo} />
