@@ -14,9 +14,9 @@ const VideoPlayer = ({ filename }: { filename: string }) => {
       url: `http://${location.hostname}:5000/video/${encodeURIComponent(
         filename
       )}`,
-      autoplay: true,
-      width: "100%", // 设置播放器宽度为100%
-      height: "100%", // 设置播放器高度为100%
+      autoplay: false,
+      width: "100%",
+      height: document.body.clientHeight,
       lang: "zh-cn",
       playbackRate: [2, 1.75, 1.5, 1, 0.5],
       volume: 1,
@@ -27,17 +27,44 @@ const VideoPlayer = ({ filename }: { filename: string }) => {
       keyShortcut: true,
     });
 
-    const savedTime = localStorage.getItem(`video-progress-${filename}`);
-    if (playerRef.current && savedTime) {
-      playerRef.current.currentTime = parseFloat(savedTime);
-    }
+    const savePlaybackData = async (filename: string, time: number) => {
+      fetch(`http://${location.hostname}:5000/save-playback`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filename,
+          time,
+        }),
+      });
+    };
 
+    const fetchPlaybackData = async () => {
+      const recordResponse = await fetch(
+        `http://${location.hostname}:5000/playback-record`
+      );
+
+      const record = await recordResponse.json();
+      const curTime = record.historyRecords[filename];
+
+      if (playerRef.current) {
+        playerRef.current.currentTime = curTime || 0;
+        savePlaybackData(filename, playerRef.current.currentTime);
+      }
+    };
+
+    fetchPlaybackData();
+
+    let lastSaveTime = 0;
     const handleTimeUpdate = () => {
       if (playerRef.current) {
-        localStorage.setItem(
-          `video-progress-${filename}`,
-          playerRef.current.currentTime.toString()
-        );
+        const currentTime = Date.now();
+        // 播放状态下每2秒保存一次播放进度
+        if (currentTime - lastSaveTime >= 2000 && playerRef.current.isPlaying) {
+          lastSaveTime = currentTime;
+          savePlaybackData(filename, playerRef.current.currentTime);
+        }
       }
     };
 

@@ -19,7 +19,7 @@ function App() {
         setVideos(data.videos);
 
         // 获取上次播放的视频路径
-        const lastPlayedVideo = localStorage.getItem("lastPlayedVideo");
+        const lastPlayedVideo = data.lastPlayedVideo;
         if (lastPlayedVideo) {
           setSelectedVideo(lastPlayedVideo);
           setSelectedKeys([lastPlayedVideo]);
@@ -57,7 +57,6 @@ function App() {
     }
     setSelectedVideo(selectedVideoKey);
     setSelectedKeys([selectedVideoKey]);
-    localStorage.setItem("lastPlayedVideo", selectedVideoKey);
   };
 
   // 处理鼠标按下事件

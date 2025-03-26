@@ -6,6 +6,17 @@ import * as path from "path";
 import * as fs from "fs-extra";
 import * as dotenv from "dotenv";
 import * as os from "os";
+import * as bodyParser from "koa-bodyparser";
+
+dotenv.config();
+
+const app = new Koa();
+const router = new Router();
+
+app.use(bodyParser());
+app.use(cors());
+app.use(KoaStatic(path.join(__dirname, "public")));
+app.use(router.routes()).use(router.allowedMethods());
 
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
@@ -21,14 +32,33 @@ function getLocalIP() {
   return addresses;
 }
 
-dotenv.config();
-
-const app = new Koa();
-const router = new Router();
-
 const VIDEO_DIR = path.resolve(
   process.env.VIDEO_DIR || path.join(__dirname, "../videos")
 );
+
+const PLAYBACK_RECORDS_FILE = path.join(
+  __dirname,
+  process.env.NODE_ENV === 'development' ? 'playback_records_dev' : 'playback_records_prod'
+);
+
+// 读取播放记录
+const getPlaybackRecords = async () => {
+  if (!fs.existsSync(PLAYBACK_RECORDS_FILE)) {
+    return {
+      lastPlayedVideo: null,
+      historyRecords: {},
+    };
+  }
+  return await fs.readJson(PLAYBACK_RECORDS_FILE);
+};
+
+// 保存播放记录
+const savePlaybackRecord = async (filename: string, time: number) => {
+  let records = await getPlaybackRecords();
+  records.lastPlayedVideo = filename;
+  records.historyRecords[filename] = time;
+  await fs.writeJson(PLAYBACK_RECORDS_FILE, records);
+};
 
 // 递归获取视频文件
 const getVideoFiles = async (dir: string, basePath = ""): Promise<any[]> => {
@@ -60,7 +90,8 @@ const getVideoFiles = async (dir: string, basePath = ""): Promise<any[]> => {
 router.get("/videos", async (ctx) => {
   try {
     const videos = await getVideoFiles(VIDEO_DIR);
-    ctx.body = { videos };
+    const records = await getPlaybackRecords();
+    ctx.body = { videos, lastPlayedVideo: records.lastPlayedVideo || null };
   } catch (err) {
     ctx.status = 500;
     ctx.body = { error: "无法获取视频列表" };
@@ -120,9 +151,31 @@ router.get(/^\/video(\/.*)?$/, async (ctx) => {
   }
 });
 
-app.use(cors());
-app.use(KoaStatic(path.join(__dirname, "public")));
-app.use(router.routes()).use(router.allowedMethods());
+// 保存播放进度
+router.post("/save-playback", async (ctx) => {
+  const { filename, time } = ctx.request.body as {
+    filename: string;
+    time: number;
+  };
+  if (!filename || time === undefined) {
+    ctx.status = 400;
+    ctx.body = { error: "参数错误" };
+    return;
+  }
+  await savePlaybackRecord(filename, time);
+  ctx.body = { success: true };
+});
+
+// 获取播放记录
+router.get("/playback-record", async (ctx) => {
+  try {
+    const records = await getPlaybackRecords();
+    ctx.body = records;
+  } catch (err) {
+    ctx.status = 500;
+    ctx.body = { error: "无法获取播放记录" };
+  }
+});
 
 const PORT: number = Number(process.env.PORT) || 5000;
 app.listen(PORT, "0.0.0.0", () => {

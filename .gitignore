@@ -25,5 +25,6 @@ dist-ssr
 .history/
 /server/public/*
 /server/*.js
+/server/playback_records_*
 /stats.html
 .env
