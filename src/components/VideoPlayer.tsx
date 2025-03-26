@@ -16,7 +16,7 @@ const VideoPlayer = ({ filename }: { filename: string }) => {
       )}`,
       autoplay: false,
       width: "100%",
-      height: document.body.clientHeight,
+      height: window.innerHeight,
       lang: "zh-cn",
       playbackRate: [2, 1.75, 1.5, 1, 0.5],
       volume: 1,
