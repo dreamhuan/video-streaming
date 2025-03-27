@@ -1,28 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { Tree } from "antd";
 import VideoPlayer from "./components/VideoPlayer";
+import { fetchVideos, savePlayback } from "./api";
 
 function App() {
   const [videos, setVideos] = useState<any[]>([]);
-  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [sidebarWidth, setSidebarWidth] = useState<number>(250);
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [selectedFileType, setSelectedFileType] = useState<
+    "video" | "pdf" | null
+  >(null);
 
   // 从后端获取视频文件数据
   useEffect(() => {
-    fetch(`http://${location.hostname}:5000/videos`)
-      .then((res) => res.json())
+    fetchVideos()
       .then((data) => {
         setVideos(data.videos);
 
         // 获取上次播放的视频路径
         const lastPlayedVideo = data.lastPlayedVideo;
         if (lastPlayedVideo) {
-          setSelectedVideo(lastPlayedVideo);
+          setSelectedFilePath(lastPlayedVideo);
           setSelectedKeys([lastPlayedVideo]);
+          if (
+            lastPlayedVideo.endsWith(".mp4") ||
+            lastPlayedVideo.endsWith(".mkv")
+          ) {
+            setSelectedFileType("video");
+          } else if (lastPlayedVideo.endsWith(".pdf")) {
+            setSelectedFileType("pdf");
+          }
 
           const pathArr = lastPlayedVideo?.split("\\");
           const len = pathArr.length;
@@ -49,14 +60,21 @@ function App() {
   // 转换后的树数据
   const treeData = renderFileTree(videos);
 
-  // 处理选择视频
+  // 处理选择文件
   const handleSelect = (selectedKeys: React.Key[]) => {
-    const selectedVideoKey = selectedKeys[0] as string;
-    if (!selectedVideoKey || !selectedVideoKey.endsWith(".mp4")) {
+    const selectedFileKey = selectedKeys[0] as string;
+    if (!selectedFileKey) {
       return;
     }
-    setSelectedVideo(selectedVideoKey);
-    setSelectedKeys([selectedVideoKey]);
+    if (selectedFileKey.endsWith(".mp4") || selectedFileKey.endsWith(".mkv")) {
+      setSelectedFileType("video");
+      setSelectedFilePath(selectedFileKey);
+    } else if (selectedFileKey.endsWith(".pdf")) {
+      setSelectedFileType("pdf");
+      setSelectedFilePath(selectedFileKey);
+      savePlayback(selectedFileKey, 0);
+    }
+    setSelectedKeys([selectedFileKey]);
   };
 
   // 处理鼠标按下事件
@@ -103,7 +121,6 @@ function App() {
         >
           ≡
         </button>
-        {/* <p className="video-title">{selectedVideo}</p> */}
       </div>
       {!isSidebarCollapsed && (
         <aside className="sidebar" style={{ width: sidebarWidth }}>
@@ -121,10 +138,19 @@ function App() {
         </aside>
       )}
       <main className="video-container">
-        {selectedVideo ? (
-          <VideoPlayer filename={selectedVideo} />
+        {selectedFilePath && selectedFileType === "video" ? (
+          <VideoPlayer filename={selectedFilePath} />
+        ) : selectedFilePath && selectedFileType === "pdf" ? (
+          <iframe
+            src={`http://${location.hostname}:5000/pdf/${encodeURIComponent(
+              selectedFilePath
+            )}`}
+            width="100%"
+            height="100%"
+            style={{ border: "none" }}
+          />
         ) : (
-          <p>请选择一个视频</p>
+          <p>请选择一个视频或PDF文件</p>
         )}
       </main>
     </div>

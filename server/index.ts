@@ -38,7 +38,9 @@ const VIDEO_DIR = path.resolve(
 
 const PLAYBACK_RECORDS_FILE = path.join(
   __dirname,
-  process.env.NODE_ENV === 'development' ? 'playback_records_dev' : 'playback_records_prod'
+  process.env.NODE_ENV === "development"
+    ? "playback_records_dev"
+    : "playback_records_prod"
 );
 
 // 读取播放记录
@@ -75,7 +77,11 @@ const getVideoFiles = async (dir: string, basePath = ""): Promise<any[]> => {
         key: relativePath, // Ensure key is a string representing file path
         children: subFiles,
       });
-    } else if (file.endsWith(".mp4") || file.endsWith(".mkv")) {
+    } else if (
+      file.endsWith(".mp4") ||
+      file.endsWith(".mkv") ||
+      file.endsWith(".pdf")
+    ) {
       result.push({
         title: file,
         key: relativePath, // Ensure key is a string representing file path
@@ -149,6 +155,28 @@ router.get(/^\/video(\/.*)?$/, async (ctx) => {
     ctx.status = 200;
     ctx.body = fs.createReadStream(filePath);
   }
+});
+
+// 提供PDF文件
+router.get("/pdf/:filename", async (ctx) => {
+  const filename = decodeURIComponent(ctx.params.filename);
+  const filePath = path.join(VIDEO_DIR, filename);
+
+  if (!fs.existsSync(filePath)) {
+    ctx.status = 404;
+    ctx.body = "PDF文件不存在";
+    return;
+  }
+
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+
+  ctx.set({
+    "Content-Length": fileSize + "",
+    "Content-Type": "application/pdf",
+  });
+  ctx.status = 200;
+  ctx.body = fs.createReadStream(filePath);
 });
 
 // 保存播放进度

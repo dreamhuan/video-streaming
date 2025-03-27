@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import Player from "xgplayer";
 import "xgplayer/dist/index.min.css";
+import { fetchPlaybackRecord, savePlayback } from "../api";
 
 const VideoPlayer = ({ filename }: { filename: string }) => {
   const playerRef = useRef<Player | null>(null);
@@ -27,30 +28,13 @@ const VideoPlayer = ({ filename }: { filename: string }) => {
       keyShortcut: true,
     });
 
-    const savePlaybackData = async (filename: string, time: number) => {
-      fetch(`http://${location.hostname}:5000/save-playback`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          filename,
-          time,
-        }),
-      });
-    };
-
     const fetchPlaybackData = async () => {
-      const recordResponse = await fetch(
-        `http://${location.hostname}:5000/playback-record`
-      );
-
-      const record = await recordResponse.json();
+      const record = await fetchPlaybackRecord();
       const curTime = record.historyRecords[filename];
 
       if (playerRef.current) {
         playerRef.current.currentTime = curTime || 0;
-        savePlaybackData(filename, playerRef.current.currentTime);
+        savePlayback(filename, playerRef.current.currentTime);
       }
     };
 
@@ -63,7 +47,7 @@ const VideoPlayer = ({ filename }: { filename: string }) => {
         // 播放状态下每2秒保存一次播放进度
         if (currentTime - lastSaveTime >= 2000 && playerRef.current.isPlaying) {
           lastSaveTime = currentTime;
-          savePlaybackData(filename, playerRef.current.currentTime);
+          savePlayback(filename, playerRef.current.currentTime);
         }
       }
     };
