@@ -17,7 +17,8 @@ const PDFViewer = ({ url, filename }: PDFViewerProps) => {
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [pageNum, setPageNum] = useState(1);
   const [pageRendering, setPageRendering] = useState(false);
-  const [scale, setScale] = useState(1.0);
+  const [_scale, setScale] = useState(1.0);
+  const initialLoadRef = useRef(true); // 添加一个标记来追踪初始加载
 
   // 渲染PDF页面
   const renderPage = async (num: number) => {
@@ -32,19 +33,12 @@ const PDFViewer = ({ url, filename }: PDFViewerProps) => {
       const container = containerRef.current;
       if (!container) return;
 
-      // 将容器滚动到顶部
-      container.scrollTo({
-        top: 0,
-        behavior: "smooth", // 使用平滑滚动效果
-      });
-
       const viewport = page.getViewport({ scale: 1.0 });
 
       // 计算适合容器宽度的缩放比例
       const containerWidth = container.clientWidth;
-      const newScale = (containerWidth - 40) / viewport.width; // 减去40px作为边距
+      const newScale = (containerWidth - 40) / viewport.width;
       setScale(newScale);
-      console.log(scale)
 
       // 使用新的缩放比例创建viewport
       const scaledViewport = page.getViewport({ scale: newScale });
@@ -64,8 +58,16 @@ const PDFViewer = ({ url, filename }: PDFViewerProps) => {
       await page.render(renderContext).promise;
       setPageRendering(false);
 
-      // 保存阅读进度
-      savePlayback(filename, num);
+      // 只在用户主动翻页时保存进度，而不是在恢复进度时保存
+      if (!initialLoadRef.current) {
+        savePlayback(filename, num);
+      }
+      initialLoadRef.current = false;
+      // 将容器滚动到顶部
+      container.scrollTo({
+        top: 0,
+        behavior: "smooth", // 使用平滑滚动效果
+      });
     } catch (error) {
       console.error("Error rendering page:", error);
       setPageRendering(false);
@@ -98,14 +100,19 @@ const PDFViewer = ({ url, filename }: PDFViewerProps) => {
   useEffect(() => {
     const loadPDF = async () => {
       try {
+        // 先获取阅读进度
+        const record = await fetchPlaybackRecord();
+        const lastPage = record.historyRecords[filename];
+
+        // 加载PDF文档
         const doc = await pdfjsLib.getDocument(url).promise;
         setPdfDoc(doc);
 
-        // 获取上次阅读进度
-        const record = await fetchPlaybackRecord();
-        const lastPage = record.historyRecords[filename];
-        if (lastPage) {
+        // 如果有上次阅读进度，设置页码
+        if (lastPage && lastPage >= 1 && lastPage <= doc.numPages) {
           setPageNum(lastPage);
+        } else {
+          setPageNum(1);
         }
       } catch (error) {
         console.error("Error loading PDF:", error);
@@ -113,11 +120,14 @@ const PDFViewer = ({ url, filename }: PDFViewerProps) => {
     };
 
     loadPDF();
+    return () => {
+      initialLoadRef.current = true; // 组件卸载时重置标记
+    };
   }, [url, filename]);
 
   // 当文档加载完成或页码改变时重新渲染
   useEffect(() => {
-    if (pdfDoc) {
+    if (pdfDoc && !pageRendering) {
       renderPage(pageNum);
     }
   }, [pdfDoc, pageNum]);
