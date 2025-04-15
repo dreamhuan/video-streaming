@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Tree } from "antd";
 import VideoPlayer from "./components/VideoPlayer";
 import { fetchVideos, savePlayback } from "./api";
+import PDFViewer from './components/PDFViewer';
 
 function App() {
   const [videos, setVideos] = useState<any[]>([]);
@@ -141,13 +142,9 @@ function App() {
         {selectedFilePath && selectedFileType === "video" ? (
           <VideoPlayer filename={selectedFilePath} />
         ) : selectedFilePath && selectedFileType === "pdf" ? (
-          <iframe
-            src={`http://${location.hostname}:5000/pdf/${encodeURIComponent(
-              selectedFilePath
-            )}`}
-            width="100%"
-            height="100%"
-            style={{ border: "none" }}
+          <PDFViewer 
+            url={`http://${location.hostname}:5000/pdf/${encodeURIComponent(selectedFilePath)}`}
+            filename={selectedFilePath}
           />
         ) : (
           <p>请选择一个视频或PDF文件</p>

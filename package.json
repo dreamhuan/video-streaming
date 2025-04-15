@@ -23,6 +23,7 @@
     "koa-router": "^13.0.1",
     "koa-static": "^5.0.0",
     "koa2-cors": "^2.0.6",
+    "pdfjs-dist": "^5.1.91",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.4.0",
